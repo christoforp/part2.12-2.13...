@@ -1,111 +1,89 @@
-import React, { useState, useEffect } from "react";
-import axios from 'axios' 
-import ShowWeather from "./components/ShowWeather";
+import React, {useState}from "react";
+
+import personService from './services/persons'
+import NewPersonForm from './components/NewPersonForm' 
+import Filterinput from './components/FilterInput'
+
+import Persons from './components/Perons'
+
 
 const App = () => {
-  const [searchFilter, setSearchFilter] = useState('')
-  const [countries,setCountries] = useState([])
+
+const [filter, setFilter]=useState([]);
+const [person,setPersons] = useState('');
 
 
-  
-
-  useEffect(() =>  {
-    axios.get("https://restcountries.com/v2/all").then((res) => {
-      setCountries(res.data)
-    })
-}, [])
-
-
-
-const api_key = process.env.REACT_APP_API_KEY
+useEffect(() => {
+  personService
+  .getAll()
+  .then((initialPersons) => {
+    setPersons(initialPersons);
+  })
+  .catch((error) => console.error(error));
+}, []);
 
 
+const addNewPerson = (newPerson) => {
+  const nameMatch = (person1, person2) => 
+  person1.toLowerCase() === person2.toLowerCase();
+}
 
-
-  const ShowWeather = ({country}) => {
-    const [weather, setWeather] = useState({})
-
-    const url= 'https://api.openweathermap.org/data/2.5/weather?q=Helsinki&appid=c33304cefa8d45d3c9835b64bce7ceda'
-
-
-
-  
-
-
-  
-
-    useEffect(() => {
-      axios
-      .get('http://api.weatherstack.com/current?access_key=57f478ad7ef5e99b1a796c2453aaf3d8&query{country.name}')
-      .then(res => setWeather(res.data))
-    }, [country])
-
-
-    return (
-      <>
-      <h1>Weather in {country.name}</h1>
-      <div><b>temperature:</b>{weather.current?.temperature} Celsius</div> 
-      <img src={weather.current?.weather_icons[0]} alt={weather.current?.weather_descriptions[0]}/>
-      <div><b>wind:</b>{weather.current?.wind_speed}mph direction {weather.current?.weather_directions}</div>
-      </>
-
-    )
-  }
-
-  
-
-
-
-
-const filteredCountries = countries.filter(country => country.name.toLowerCase().includes(searchFilter.toLowerCase()))
-return(
-    <div>
-    find countries <input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} />
-    <ShowResults  filteredCountries={filteredCountries} setSearchFilter={setSearchFilter}/>
-        </div>
+const Person  = Persons.find((person) => 
+namesMatch(person.name, newPerson.name)
 
 )
-}
-const ShowResults = ({filteredCountries, setSearchFilter}) => {
-  if(filteredCountries.length === 1) {
-    const country = filteredCountries[0]
-    return(
-      <div>
-        <h1>{country.name}</h1>
-        <div>capital {country.capital}</div>
-        <div>population {country.population}</div>
-          <h1>languages</h1>
-        <ul>
-        {country.languages.map(language => <li>{language.name}</li>)}
-        </ul>
-        <img src={country.flag} alt={country.name} width="30%" />
-        </div>
 
+
+if (person) {
+  if (
+    window.confirm(
+      `${newPerson.name} is already added to the phonebook, replace the old number with the new one?`
     )
+  ) {
+    const updatedPerson = { ...person, number: newPerson.number };
+    personService
+      .update(person.id, updatedPerson)
+      .then((returnedPerson) => {
+        setPersons(
+          persons
+            .filter((p) => p.name !== updatedPerson.name)
+            .concat(returnedPerson)
+        );
+        setMessage({
+          text: `Updated ${updatedPerson.name}'s number`,
+          type: "success",
+        });
+        setTimeout(() => setMessage(null), 5000);
+      })
+      .catch((error) => {
+        setPersons(person.filter((p) => p.name !== person.name));
+        setMessage({
+          text: `${person.name} has already been deleted from the server`,
+          type: "error",
+        });
+        setTimeout(() => setMessage(null), 5000);
+      });
   }
 
-     
+  return;
 
-  
-  if(filteredCountries.length > 10) return <div>Too many matches, specify another filter</div> 
-  return filteredCountries.map(country => {
+}
 
-
-    return(
-<div key={country.name}>{country.name}<button value={country.name} onClick={(e) => setSearchFilter(e.target.value)}>show</button>
-  </div>
-  )
-
+personService
+.create(Newperson)
+.then((returnedPerson) => {
+  setPersons([... persons, returnedPerson])
+  setMessage({
+    text: `Added ${returnedPerson.name}`,
+    type: "success",
+    });
+    setTimeout(() => setMessage(null), 5000); 
     })
-  }
-
-
-
-  
-
-
-
-
+    .catch((error) => {
+        setMessage({ text: error.response.data.error, type: "error" });
+        setTimeout(() => setMessage(null), 5000);
+        console.error(error);
+      });
 
 
 
@@ -113,13 +91,22 @@ const ShowResults = ({filteredCountries, setSearchFilter}) => {
 
 
 
+return(
+  <div>
+    <h1>Phonebook</h1>
+    <Filterinput setFilter={setFilter} />
+    <NewPersonForm  newPerson={addNewPerson} />
+  <h2>Numbers</h2>
+  </div>
+)
 
-
-
-
-
-
-
+}
 export default App
+
+
+
+
+
+
 
 
